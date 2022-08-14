@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 class ForensicsClips(Dataset):
     """Dataset class for FaceForensics++, FaceShifter, and DeeperForensics. Supports returning only a subset of forgery
     methods in dataset"""
+
     def __init__(
             self,
             real_videos,
@@ -100,6 +101,7 @@ class ForensicsClips(Dataset):
 
 class CelebDFClips(Dataset):
     """Dataset class for Celeb-DF-v2"""
+
     def __init__(
             self,
             frames_per_clip,
@@ -113,7 +115,9 @@ class CelebDFClips(Dataset):
         self.transform = transform
         self.clips_per_video = []
 
-        ds_types = ['RealCelebDF', 'FakeCelebDF']
+        ds_types = ['Celeb-real', 'Celeb-synthesis']  # kuhn edited
+        # ds_types = ['Celeb-real']  # kuhn edited
+        # ds_types = ['RealCelebDF', 'FakeCelebDF']
         for ds_type in ds_types:
             video_paths = os.path.join('./data', 'datasets', 'CelebDF', ds_type, 'cropped_mouths')
             videos = sorted(os.listdir(video_paths))
@@ -122,18 +126,21 @@ class CelebDFClips(Dataset):
             for video in videos:
                 path = os.path.join(video_paths, video)
                 num_frames = len(os.listdir(path))
-                num_clips = num_frames // frames_per_clip
-                self.clips_per_video.append(num_clips)
+                num_clips = num_frames // frames_per_clip  # one clip has 25 frames.
+                self.clips_per_video.append(num_clips)  # It stores the number of clips in each video.
                 self.paths.append(path)
 
         clip_lengths = torch.as_tensor(self.clips_per_video)
-        self.cumulative_sizes = clip_lengths.cumsum(0).tolist()
+        self.cumulative_sizes = clip_lengths.cumsum(0).tolist()  # acumulative_sizes is the cumulative sum of the number of clips of all videos. 25, 50, 75,,,
 
     def __len__(self):
         return self.cumulative_sizes[-1]
 
     def get_clip(self, idx):
-        video_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+        """
+        get one clip from the dataset based on the index.
+        """
+        video_idx = bisect.bisect_right(self.cumulative_sizes, idx)  # bisect_right returns the index of the first element in the list that is greater than the specified value.
         if video_idx == 0:
             clip_idx = idx
         else:
@@ -161,7 +168,7 @@ class CelebDFClips(Dataset):
     def __getitem__(self, idx):
         sample, video_idx = self.get_clip(idx)
 
-        label = 0 if video_idx < self.videos_per_type['RealCelebDF'] else 1
+        label = 0 if video_idx < self.videos_per_type['Celeb-real'] else 1  # kuhn edited This line is very important: 1 for fake, 0 for real.
         label = torch.tensor(label, dtype=torch.float32)
 
         sample = torch.from_numpy(sample).unsqueeze(-1)
@@ -173,6 +180,7 @@ class CelebDFClips(Dataset):
 
 class DFDCClips(Dataset):
     """Dataset class for DFDC"""
+
     def __init__(
             self,
             frames_per_clip,

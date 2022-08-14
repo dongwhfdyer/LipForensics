@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 from utils import warp_img, apply_transform, cut_patch
 
-
 DATASETS = {
     "FaceForensics++": [
         "Forensics/RealFF",
@@ -36,8 +35,17 @@ STABLE_POINTS = [33, 36, 39, 42, 45]
 
 
 def parse_args():
+    # ---------kkuhn-block------------------------------
+    data_root = "..\\data\\datasets\\CelebDF\\Celeb-synthesis"
+    # data_root = "..\\data\\datasets\\CelebDF\\Celeb-real"
+
+    one_dataset = "CelebDF"
+    # mean_face = "preprocessing/20words_mean_face.npy"
+    mean_face = "20words_mean_face.npy"
+    dataset_name = "CelebDF\\Celeb-real"
+    # ---------kkuhn-block------------------------------
     parser = argparse.ArgumentParser(description="Pre-processing")
-    parser.add_argument("--data-root", help="Root path of datasets", type=str, default="./data/datasets")
+    parser.add_argument("--data-root", help="Root path of datasets", type=str, default=data_root)
     parser.add_argument(
         "--dataset",
         help="Dataset to preprocess",
@@ -55,7 +63,7 @@ def parse_args():
             "CelebDF",
             "DFDC",
         ],
-        default="ff",
+        default=one_dataset,
     )
     parser.add_argument(
         "--compression",
@@ -64,12 +72,13 @@ def parse_args():
         choices=["c0", "c23", "c40"],
         default="c23",
     )
-    parser.add_argument("--mean-face", default="./preprocessing/20words_mean_face.npy", help="Mean face pathname")
+    parser.add_argument("--mean-face", default=mean_face, help="Mean face pathname")
     parser.add_argument("--crop-width", default=96, type=int, help="Width of mouth ROIs")
     parser.add_argument("--crop-height", default=96, type=int, help="Height of mouth ROIs")
     parser.add_argument("--start-idx", default=48, type=int, help="Start of landmark index for mouth")
     parser.add_argument("--stop-idx", default=68, type=int, help="End of landmark index for mouth")
     parser.add_argument("--window-margin", default=12, type=int, help="Window margin for smoothed_landmarks")
+    parser.add_argument("--sub_dataset_name", default=dataset_name, help="Sub-dataset name")  # kuhn edited
 
     args = parser.parse_args()
     return args
@@ -109,6 +118,7 @@ def crop_video_and_save(video_path, landmarks_dir, target_dir, mean_face_landmar
         q_landmarks.append(landmarks)
         q_name.append(frame_name)
 
+        # ---------kkuhn-block----------------------------- tackle the case when the queue is not full yet.
         if len(q_frames) == args.window_margin:  # Wait until queues are large enough
             smoothed_landmarks = np.mean(q_landmarks, axis=0)
 
@@ -127,7 +137,7 @@ def crop_video_and_save(video_path, landmarks_dir, target_dir, mean_face_landmar
             # Crop mouth region
             cropped_frame = cut_patch(
                 trans_frame,
-                trans_landmarks[args.start_idx : args.stop_idx],
+                trans_landmarks[args.start_idx: args.stop_idx],
                 args.crop_height // 2,
                 args.crop_width // 2,
             )
@@ -135,8 +145,9 @@ def crop_video_and_save(video_path, landmarks_dir, target_dir, mean_face_landmar
             # Save image
             target_path = os.path.join(target_dir, cur_name)
             Image.fromarray(cropped_frame.astype(np.uint8)).save(target_path)
+        # ---------kkuhn-block------------------------------
 
-    # Process remaining frames in the queue
+    # ---------kkuhn-block------------------------------Process remaining frames in the queue
     while q_frames:
         cur_frame = q_frames.popleft()
         cur_name = q_name.popleft()
@@ -146,11 +157,12 @@ def crop_video_and_save(video_path, landmarks_dir, target_dir, mean_face_landmar
         trans_landmarks = trans(cur_landmarks)
 
         cropped_frame = cut_patch(
-            trans_frame, trans_landmarks[args.start_idx : args.stop_idx], args.crop_height // 2, args.crop_width // 2
+            trans_frame, trans_landmarks[args.start_idx: args.stop_idx], args.crop_height // 2, args.crop_width // 2
         )
 
         target_path = os.path.join(target_dir, cur_name)
         Image.fromarray(cropped_frame.astype(np.uint8)).save(target_path)
+    # ---------kkuhn-block------------------------------
 
 
 def main():
@@ -178,13 +190,13 @@ def main():
         compression = (
             args.compression if dataset not in ("CelebDF/RealCelebDF", "CelebDF/FakeCelebDF", "DFDC") else ""
         )
-        root = os.path.join(args.data_root, dataset, compression)
+        root = args.data_root  # kuhn edited
+        # root = os.path.join(args.data_root, dataset, compression)
         videos_root = os.path.join(root, "images")
         landmarks_root = os.path.join(root, "landmarks")
 
         video_folders = sorted(os.listdir(videos_root))
 
-        print(f"\nProcessing {dataset}...")
         for video in tqdm(video_folders):
             target_dir = os.path.join(root, "cropped_mouths", video)
             video_dir = os.path.join(videos_root, video)

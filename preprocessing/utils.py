@@ -9,7 +9,7 @@ from skimage import transform as tf
 def warp_img(src, dst, img, std_size):
     """ "
     Warp image to match mean face landmarks
-
+    https://scikit-image.org/docs/dev/auto_examples/transform/plot_geometric.html#sphx-glr-auto-examples-transform-plot-geometric-py
     Parameters
     ----------
     src : numpy.array
@@ -20,6 +20,7 @@ def warp_img(src, dst, img, std_size):
         Frame to be aligned
     std_size : tuple
         Target size for frames
+
     """
     tform = tf.estimate_transform("similarity", src, dst)  # find the transformation matrix
     warped = tf.warp(img, inverse_map=tform.inverse, output_shape=std_size)  # wrap the frame image
@@ -65,6 +66,10 @@ def cut_patch(img, landmarks, height, width, threshold=5):
         Threshold for determining whether to throw an exception when the initial bounding box is out of bounds
 
     """
+    # Let's say the width = 480, height = 480
+    # we hope center_y is above the middle of the image and center_x is to the right of the middle of the image.
+    # when center_x is around [475, 480] or center_y is around [475, 480], adjust the bounding box accordingly.
+    #
     center_x, center_y = np.mean(landmarks, axis=0)
     if center_y - height < 0:
         center_y = height
@@ -74,9 +79,9 @@ def cut_patch(img, landmarks, height, width, threshold=5):
         center_x = width
     if center_x - width < 0 - threshold:
         raise Exception("too much bias in width")
-    if center_y + height > img.shape[0]:
+    if center_y + height > img.shape[0]:  # if the bounding box is out of bounds, then adjust the bounding box.
         center_y = img.shape[0] - height
-    if center_y + height > img.shape[0] + threshold:
+    if center_y + height > img.shape[0] + threshold:  # if it's too much bias, then throw an exception.
         raise Exception("too much bias in height")
     if center_x + width > img.shape[1]:
         center_x = img.shape[1] - width
@@ -85,8 +90,8 @@ def cut_patch(img, landmarks, height, width, threshold=5):
 
     img_cropped = np.copy(
         img[
-            int(round(center_y) - round(height)) : int(round(center_y) + round(height)),
-            int(round(center_x) - round(width)) : int(round(center_x) + round(width)),
+        int(round(center_y) - round(height)): int(round(center_y) + round(height)),
+        int(round(center_x) - round(width)): int(round(center_x) + round(width)),
         ]
     )
     return img_cropped

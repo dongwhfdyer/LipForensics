@@ -17,7 +17,11 @@ from models.spatiotemporal_net import get_model
 from utils import get_files_from_split
 
 
+# python evaluate.py --dataset FaceShifter --weights_forgery ./models/weights/lipforensics_ff.pth
 def parse_args():
+    # ---------kkuhn-block------------------------------ kuhn param settings
+    dataset = "CelebDF"
+    # ---------kkuhn-block------------------------------
     parser = argparse.ArgumentParser(description="DeepFake detector evaluation")
     parser.add_argument(
         "--dataset",
@@ -34,7 +38,7 @@ def parse_args():
             "CelebDF",
             "DFDC",
         ],
-        default="FaceForensics++",
+        default=dataset,
     )
     parser.add_argument(
         "--compression",
@@ -47,9 +51,9 @@ def parse_args():
     parser.add_argument("--rgb", dest="grayscale", action="store_false")
     parser.set_defaults(grayscale=True)
     parser.add_argument("--frames_per_clip", default=25, type=int)
-    parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--batch_size", default=8, type=int)
     parser.add_argument("--device", help="Device to put tensors on", type=str, default="cuda:0")
-    parser.add_argument("--num_workers", default=4, type=int)
+    parser.add_argument("--num_workers", default=0, type=int)
     parser.add_argument(
         "--weights_forgery_path",
         help="Path to pretrained weights for forgery detection",
@@ -131,7 +135,9 @@ def main():
 
     # Get dataset
     transform = Compose(
-        [ToTensorVideo(), CenterCrop((88, 88)), NormalizeVideo((0.421,), (0.165,))]
+        [ToTensorVideo(),  # clip.float().permute(3, 0, 1, 2) / 255.0
+         CenterCrop((88, 88)),  # Crops the given image at the center.
+         NormalizeVideo((0.421,), (0.165,))]
     )
     if args.dataset in [
         "FaceForensics++",
@@ -160,8 +166,10 @@ def main():
             transform=transform,
             max_frames_per_video=110,
         )
+    # ---------kkuhn-block------------------------------ CelebDF
     elif args.dataset == "CelebDF":
-        dataset = CelebDFClips(args.frames_per_clip, args.grayscale, transform)
+        dataset = CelebDFClips(args.frames_per_clip, args.grayscale, transform)  # frames_per_clip=25, grayscale=True, transform=transform
+    # ---------kkuhn-block------------------------------
     else:
         metadata = pd.read_json(args.dfdc_metadata_path).T
         dataset = DFDCClips(args.frames_per_clip, metadata, args.grayscale, transform)
