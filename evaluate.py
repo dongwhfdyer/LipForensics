@@ -105,7 +105,7 @@ def validate_video_level(model, loader, args):
     args
         Options for evaluation
     """
-    model.eval()
+    model.eval()  # bagging idea
 
     video_to_logits = defaultdict(list)
     video_to_labels = {}

@@ -5,8 +5,12 @@ import json
 import torch
 import torch.nn as nn
 
-from .resnet import ResNet, BasicBlock
-from .tcn import MultibranchTemporalConvNet
+from resnet import ResNet, BasicBlock  # todo changed it back
+from tcn import MultibranchTemporalConvNet
+
+
+# from .resnet import ResNet, BasicBlock
+# from .tcn import MultibranchTemporalConvNet
 
 
 def load_json(json_fp):
@@ -60,6 +64,27 @@ def _average_batch(x, lengths):
     return torch.stack([torch.mean(x[index][:, 0:i], 1) for index, i in enumerate(lengths)], 0)
 
 
+def model_show_with_tensorboard():
+    args_loaded = load_json("configs/lrw_resnet18_mstcn.json")
+    relu_type = args_loaded["relu_type"]
+    tcn_options = {
+        "num_layers": args_loaded["tcn_num_layers"],
+        "kernel_size": args_loaded["tcn_kernel_size"],
+        "dropout": args_loaded["tcn_dropout"],
+        "dwpw": args_loaded["tcn_dwpw"],
+        "width_mult": args_loaded["tcn_width_mult"],
+    }
+    model = Lipreading(num_classes=1, tcn_options=tcn_options, relu_type=relu_type)
+
+    from torch.utils.tensorboard import SummaryWriter
+
+    writer = SummaryWriter(log_dir='rubb/tensorboardlog')
+    dummy_in = torch.randn(1, 1, 25, 88, 88)
+    with SummaryWriter(comment='kkkk', log_dir='rubb/tensorboardlog') as w:
+        w.add_graph(model, (dummy_in))
+    writer.close()
+
+
 class MultiscaleMultibranchTCN(nn.Module):
     def __init__(self, input_size, num_channels, num_classes, tcn_options, dropout, relu_type, dwpw=False):
         super(MultiscaleMultibranchTCN, self).__init__()
@@ -81,8 +106,10 @@ class MultiscaleMultibranchTCN(nn.Module):
 
 
 class Lipreading(nn.Module):
-    def __init__(self, hidden_dim=256, num_classes=500, relu_type="prelu", tcn_options={}):
+    def __init__(self, hidden_dim=256, num_classes=500, relu_type="prelu", tcn_options=None):
         super(Lipreading, self).__init__()
+        if tcn_options is None:
+            tcn_options = {}
         self.frontend_nout = 64
         self.backend_out = 512
         self.trunk = ResNet(BasicBlock, [2, 2, 2, 2], relu_type=relu_type)
@@ -97,7 +124,7 @@ class Lipreading(nn.Module):
         self.tcn = MultiscaleMultibranchTCN(
             input_size=self.backend_out,
             num_channels=[hidden_dim * len(tcn_options["kernel_size"]) * tcn_options["width_mult"]]
-            * tcn_options["num_layers"],
+                         * tcn_options["num_layers"],
             num_classes=num_classes,
             tcn_options=tcn_options,
             dropout=tcn_options["dropout"],
@@ -105,10 +132,14 @@ class Lipreading(nn.Module):
             dwpw=tcn_options["dwpw"],
         )
 
-    def forward(self, x, lengths):
+    def forward(self, x, lengths=[25] * 1):  # todo: fix this
         x = self.frontend3D(x)
         t_new = x.shape[2]
         x = reshape_tensor(x)
         x = self.trunk(x)
-        x = x.view(-1, t_new, x.size(1))
+        x = x.view(-1, t_new, x.size(1))  # 8 * 25 * 512
         return self.tcn(x, lengths)
+
+
+if __name__ == '__main__':
+    model_show_with_tensorboard()

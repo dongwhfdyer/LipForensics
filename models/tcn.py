@@ -17,7 +17,7 @@ class Chomp1d(nn.Module):
         if self.chomp_size == 0:
             return x
         if self.symm_chomp:
-            return x[:, :, self.chomp_size // 2 : -self.chomp_size // 2].contiguous()
+            return x[:, :, self.chomp_size // 2: -self.chomp_size // 2].contiguous()
         else:
             return x[:, :, : -self.chomp_size].contiguous()
 
@@ -63,7 +63,7 @@ class ConvBatchChompRelu(nn.Module):
 
 class MultibranchTemporalBlock(nn.Module):
     def __init__(
-        self, n_inputs, n_outputs, kernel_sizes, stride, dilation, padding, dropout=0.2, relu_type="relu", dwpw=False
+            self, n_inputs, n_outputs, kernel_sizes, stride, dilation, padding, dropout=0.2, relu_type="relu", dwpw=False
     ):
         super(MultibranchTemporalBlock, self).__init__()
 

@@ -1,3 +1,6 @@
+"""
+Just run it to see the effect of the perspective transform. kuhn edited. 20220817
+"""
 import math
 
 import cv2
@@ -19,8 +22,6 @@ tform_v4 = transform.estimate_transform("euclidean", dst, src)
 
 tform3.estimate(src, dst)
 warped = transform.warp(text, tform3, output_shape=(height, width))
-warped_v4 = transform.warp(text, inverse_map=tform_v4.inverse, output_shape=(400, 300))
-# warped_v4 = transform.warp(text, inverse_map=tform_v4.inverse, output_shape=(400,300))
 
 fig, ax = plt.subplots(nrows=2, figsize=(8, 3))
 # new_img = cv2.warpAffine(text, tform_v4, (height, width))
@@ -32,8 +33,7 @@ ax[0].plot(dst[:1, 0], dst[:1, 1], '.r')
 
 # ax[0].plot(dst[:, 0], dst[:, 1], '.r')
 
-ax[1].imshow(warped_v4, cmap=plt.cm.gray)
-# ax[1].imshow(warped, cmap=plt.cm.gray)
+ax[1].imshow(warped, cmap=plt.cm.gray)
 
 ax[1].plot(src[:1, 0], src[:1, 1], '.r')
 for a in ax:

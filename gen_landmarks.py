@@ -74,5 +74,5 @@ def detect_face_and_save_landmarks():
 
 
 if __name__ == '__main__':
-    # read_landmarks()
-    detect_face_and_save_landmarks()
+    read_landmarks()
+    # detect_face_and_save_landmarks()

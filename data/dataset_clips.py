@@ -125,12 +125,13 @@ class CelebDFClips(Dataset):
             self.videos_per_type[ds_type] = len(videos)
             for video in videos:
                 path = os.path.join(video_paths, video)
-                num_frames = len(os.listdir(path))
+                num_frames = len(os.listdir(path))  # number of frames in video
                 num_clips = num_frames // frames_per_clip  # one clip has 25 frames.
                 self.clips_per_video.append(num_clips)  # It stores the number of clips in each video.
                 self.paths.append(path)
 
-        clip_lengths = torch.as_tensor(self.clips_per_video)
+        clip_lengths = torch.as_tensor(self.clips_per_video)  # 233 , 456 , 299
+        # 233 ,233+456, 233+456+299 ,
         self.cumulative_sizes = clip_lengths.cumsum(0).tolist()  # acumulative_sizes is the cumulative sum of the number of clips of all videos. 25, 50, 75,,,
 
     def __len__(self):
